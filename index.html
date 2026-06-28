@@ -525,6 +525,8 @@ let current = "de", initial = true;
 let ytPlayer = null;
 let ytReady = false;
 let musicPlaying = false;
+let musicInitStarted = false;
+let musicGestureBound = false;
 
 function computeDays(){
   const target = new Date(2026,7,29);
@@ -694,13 +696,44 @@ function loadYouTubeApi(cb){
   }
 }
 
-function initYouTubePlayer(onReady){
+function tryPlayMusic(){
+  if(!ytPlayer || !ytReady) return false;
+  try{
+    if(typeof ytPlayer.unMute === "function") ytPlayer.unMute();
+    ytPlayer.setVolume(45);
+    ytPlayer.playVideo();
+    return true;
+  }catch(_e){
+    return false;
+  }
+}
+
+function playWithUserActivation(){
+  if(navigator.userActivation && navigator.userActivation.isActive) tryPlayMusic();
+}
+
+function bindMusicGestureFallback(){
+  if(musicGestureBound) return;
+  musicGestureBound = true;
+  const kick = ()=>{
+    if(musicPlaying) return;
+    if(tryPlayMusic()) return;
+    if(!musicInitStarted) startBackgroundMusic();
+    else setTimeout(tryPlayMusic, 120);
+  };
+  document.addEventListener("pointerdown", kick, { once: true, capture: true });
+  document.addEventListener("touchstart", kick, { once: true, capture: true, passive: true });
+  document.addEventListener("click", kick, { once: true, capture: true });
+}
+
+function initYouTubePlayer(){
+  if(ytPlayer) return;
   ytPlayer = new YT.Player("yt-player", {
     height: "0",
     width: "0",
     videoId: YT_VIDEO_ID,
     playerVars: {
-      autoplay: 0,
+      autoplay: 1,
       controls: 0,
       disablekb: 1,
       fs: 0,
@@ -709,35 +742,48 @@ function initYouTubePlayer(onReady){
       playlist: YT_VIDEO_ID,
       rel: 0,
       modestbranding: 1,
-      playsinline: 1
+      playsinline: 1,
+      mute: 1
     },
     events: {
       onReady: e=>{
-        e.target.setVolume(45);
         ytReady = true;
-        onReady();
+        e.target.setVolume(45);
+        e.target.playVideo();
+        window.setTimeout(()=>{
+          try{ e.target.unMute(); e.target.setVolume(45); }catch(_err){}
+          tryPlayMusic();
+          playWithUserActivation();
+        }, 350);
+        [900, 1800, 3200].forEach(ms=> window.setTimeout(()=>{ tryPlayMusic(); playWithUserActivation(); }, ms));
+        bindMusicGestureFallback();
       },
       onStateChange: e=>{
         if(e.data === YT.PlayerState.ENDED) e.target.playVideo();
         musicPlaying = e.data === YT.PlayerState.PLAYING;
         updateMusicBtn();
-      }
+      },
+      onError: ()=> bindMusicGestureFallback()
     }
   });
 }
 
+function startBackgroundMusic(){
+  if(musicInitStarted) return;
+  musicInitStarted = true;
+  loadYouTubeApi(initYouTubePlayer);
+}
+
 function toggleMusic(){
+  if(!musicInitStarted) startBackgroundMusic();
   if(ytPlayer && ytReady){
     if(musicPlaying) ytPlayer.pauseVideo();
-    else ytPlayer.playVideo();
+    else tryPlayMusic();
     return;
   }
   loadYouTubeApi(()=>{
-    if(ytPlayer && ytReady){
-      ytPlayer.playVideo();
-      return;
-    }
-    initYouTubePlayer(()=> ytPlayer.playVideo());
+    if(!ytPlayer) initYouTubePlayer();
+    else tryPlayMusic();
   });
 }
 
@@ -772,6 +818,14 @@ function toggleMusic(){
 
   setInterval(()=>{ $("cd-num").textContent = current==="fa" ? faDigits(computeDays()) : computeDays(); }, 60000);
   setTimeout(setupTilt, 2800);
+
+  startBackgroundMusic();
+  playWithUserActivation();
+  window.setTimeout(playWithUserActivation, 100);
+  window.addEventListener("pageshow", ()=>{ setTimeout(tryPlayMusic, 200); playWithUserActivation(); });
+  document.addEventListener("visibilitychange", ()=>{
+    if(!document.hidden) setTimeout(tryPlayMusic, 200);
+  });
 })();
 </script>
 </body>
