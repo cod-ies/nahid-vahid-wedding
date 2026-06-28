@@ -519,6 +519,7 @@ const I18N = {
 
 const ORDER = ["fa","en","de","nl","fr"];
 const YT_VIDEO_ID = "3gn_6HNGCtY";
+const YT_START_SEC = 2 * 60 + 37;
 const $ = id => document.getElementById(id);
 const faDigits = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 let current = "de", initial = true;
@@ -696,9 +697,15 @@ function loadYouTubeApi(cb){
   }
 }
 
+function seekToStart(){
+  if(!ytPlayer || !ytReady) return;
+  try{ ytPlayer.seekTo(YT_START_SEC, true); }catch(_e){}
+}
+
 function tryPlayMusic(){
   if(!ytPlayer || !ytReady) return false;
   try{
+    seekToStart();
     if(typeof ytPlayer.unMute === "function") ytPlayer.unMute();
     ytPlayer.setVolume(45);
     ytPlayer.playVideo();
@@ -740,6 +747,7 @@ function initYouTubePlayer(){
       iv_load_policy: 3,
       loop: 1,
       playlist: YT_VIDEO_ID,
+      start: YT_START_SEC,
       rel: 0,
       modestbranding: 1,
       playsinline: 1,
@@ -759,7 +767,10 @@ function initYouTubePlayer(){
         bindMusicGestureFallback();
       },
       onStateChange: e=>{
-        if(e.data === YT.PlayerState.ENDED) e.target.playVideo();
+        if(e.data === YT.PlayerState.ENDED){
+          seekToStart();
+          e.target.playVideo();
+        }
         musicPlaying = e.data === YT.PlayerState.PLAYING;
         updateMusicBtn();
       },
