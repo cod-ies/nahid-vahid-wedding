@@ -314,6 +314,25 @@
     .names .nm{background-position:0 0 !important;}
     .petals{display:none !important;}
   }
+
+  /* background music toggle */
+  .music-btn{
+    position:fixed; z-index:3; right:clamp(12px,4vw,18px); bottom:clamp(12px,4vw,18px);
+    width:48px; height:48px; border-radius:50%; padding:0;
+    border:1px solid #c2a875; background:rgba(250,245,234,.94);
+    color:#b08d57; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 16px rgba(36,53,49,.16);
+    transition:background .25s, color .25s, border-color .25s, transform .2s;
+  }
+  .music-btn svg{width:22px; height:22px; display:block; fill:currentColor;}
+  .music-btn:hover{background:#faf5ea; color:#243531; border-color:#b08d57;}
+  .music-btn:focus-visible{outline:2px solid #b08d57; outline-offset:2px;}
+  .music-btn.playing{background:#243531; color:#f3ead5; border-color:#243531;}
+  .music-btn.playing .icon-play{display:none;}
+  .music-btn.playing .icon-pause{display:block;}
+  .music-btn .icon-pause{display:none;}
+  .yt-player{position:fixed; width:0; height:0; overflow:hidden; opacity:0; pointer-events:none;}
 </style>
 </head>
 <body>
@@ -403,6 +422,12 @@
     </div>
   </div>
 
+  <button type="button" class="music-btn" id="btn-music" aria-pressed="false" aria-label="Musik abspielen" title="Musik abspielen">
+    <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>
+  </button>
+  <div id="yt-player" class="yt-player" aria-hidden="true"></div>
+
 <script>
 const CONTACTS = [
   { name:"Haji Qasem Alizadeh", fa:"حاجی قاسم علیزاده", display:"0049 176 57986032",  raw:"004917657986032" },
@@ -421,6 +446,7 @@ const I18N = {
     rsvpNote:"جهت هر چه بهتر برگزار شدن محفل، از تمام مهمانان گرامی خواهشمندیم که تصمیم خود را به اطلاع برگزارکنندگان برسانند.",
     deadline:"لطفاً تا ۰۷.۰۸ پاسخ دهید",
     bZusagen:"اعلام حضور یا عدم حضور", bRoute:"مسیریابی", bCal:"افزودن به تقویم",
+    bMusicPlay:"پخش موسیقی", bMusicPause:"توقف موسیقی",
     pTitle:"اعلام حضور یا عدم حضور",
     pIntro:"برای پرسش، اعلام حضور یا عدم حضور لطفاً با این عزیزان تماس بگیرید:",
     pCall:"تماس", pClose:"بستن",
@@ -436,6 +462,7 @@ const I18N = {
     rsvpNote:"To help us make the celebration as wonderful as possible, we kindly ask all our dear guests to share their decision with the hosts.",
     deadline:"Please reply by 7 August",
     bZusagen:"Accept or Decline", bRoute:"Directions", bCal:"Add to calendar",
+    bMusicPlay:"Play music", bMusicPause:"Pause music",
     pTitle:"Reply to the hosts",
     pIntro:"For any question, acceptance or cancellation, please contact:",
     pCall:"Call", pClose:"Close",
@@ -451,6 +478,7 @@ const I18N = {
     rsvpNote:"Damit die Feier so schön wie möglich wird, bitten wir alle lieben Gäste, den Gastgebern ihre Entscheidung mitzuteilen.",
     deadline:"Bitte um Rückmeldung bis 7. August",
     bZusagen:"Zusagen oder Absagen", bRoute:"Route", bCal:"Zum Kalender",
+    bMusicPlay:"Musik abspielen", bMusicPause:"Musik pausieren",
     pTitle:"Zu- oder Absage",
     pIntro:"Für Fragen, Zu- oder Absagen wenden Sie sich bitte an:",
     pCall:"Anrufen", pClose:"Schließen",
@@ -466,6 +494,7 @@ const I18N = {
     rsvpNote:"Om het feest zo mooi mogelijk te maken, vragen wij alle lieve gasten vriendelijk hun beslissing aan de gastheren door te geven.",
     deadline:"Graag bevestigen vóór 7 augustus",
     bZusagen:"Aanmelden of afmelden", bRoute:"Route", bCal:"Naar agenda",
+    bMusicPlay:"Muziek afspelen", bMusicPause:"Muziek pauzeren",
     pTitle:"Aan- of afmelden",
     pIntro:"Voor vragen, aan- of afmeldingen kunt u contact opnemen met:",
     pCall:"Bellen", pClose:"Sluiten",
@@ -481,6 +510,7 @@ const I18N = {
     rsvpNote:"Afin que la fête soit la plus belle possible, nous prions tous nos chers invités de communiquer leur décision aux hôtes.",
     deadline:"Merci de répondre avant le 7 août",
     bZusagen:"Accepter ou refuser", bRoute:"Itinéraire", bCal:"Au calendrier",
+    bMusicPlay:"Lire la musique", bMusicPause:"Mettre en pause",
     pTitle:"Répondre aux hôtes",
     pIntro:"Pour toute question, confirmation ou annulation, veuillez contacter :",
     pCall:"Appeler", pClose:"Fermer",
@@ -488,9 +518,13 @@ const I18N = {
 };
 
 const ORDER = ["fa","en","de","nl","fr"];
+const YT_VIDEO_ID = "3gn_6HNGCtY";
 const $ = id => document.getElementById(id);
 const faDigits = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 let current = "de", initial = true;
+let ytPlayer = null;
+let ytReady = false;
+let musicPlaying = false;
 
 function computeDays(){
   const target = new Date(2026,7,29);
@@ -565,6 +599,7 @@ function render(lang){
 
   if(!initial){ inner.style.opacity = "0"; requestAnimationFrame(()=>{ inner.style.opacity = "1"; }); }
   initial = false;
+  updateMusicBtn();
 }
 
 /* Shrink the Pinyon Script names so they never overflow on narrow screens */
@@ -637,6 +672,75 @@ function buildPetals(){
   }
 }
 
+function updateMusicBtn(){
+  const btn = $("btn-music");
+  if(!btn) return;
+  const t = I18N[current];
+  const label = musicPlaying ? t.bMusicPause : t.bMusicPlay;
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+  btn.setAttribute("aria-pressed", musicPlaying ? "true" : "false");
+  btn.classList.toggle("playing", musicPlaying);
+}
+
+function loadYouTubeApi(cb){
+  if(window.YT && window.YT.Player){ cb(); return; }
+  const prev = window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady = ()=>{ if(typeof prev === "function") prev(); cb(); };
+  if(!document.querySelector('script[src*="youtube.com/iframe_api"]')){
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(s);
+  }
+}
+
+function initYouTubePlayer(onReady){
+  ytPlayer = new YT.Player("yt-player", {
+    height: "0",
+    width: "0",
+    videoId: YT_VIDEO_ID,
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      disablekb: 1,
+      fs: 0,
+      iv_load_policy: 3,
+      loop: 1,
+      playlist: YT_VIDEO_ID,
+      rel: 0,
+      modestbranding: 1,
+      playsinline: 1
+    },
+    events: {
+      onReady: e=>{
+        e.target.setVolume(45);
+        ytReady = true;
+        onReady();
+      },
+      onStateChange: e=>{
+        if(e.data === YT.PlayerState.ENDED) e.target.playVideo();
+        musicPlaying = e.data === YT.PlayerState.PLAYING;
+        updateMusicBtn();
+      }
+    }
+  });
+}
+
+function toggleMusic(){
+  if(ytPlayer && ytReady){
+    if(musicPlaying) ytPlayer.pauseVideo();
+    else ytPlayer.playVideo();
+    return;
+  }
+  loadYouTubeApi(()=>{
+    if(ytPlayer && ytReady){
+      ytPlayer.playVideo();
+      return;
+    }
+    initYouTubePlayer(()=> ytPlayer.playVideo());
+  });
+}
+
 (function build(){
   const bar = $("langbar");
   ORDER.forEach((code,i)=>{
@@ -650,6 +754,7 @@ function buildPetals(){
   $("btn-rsvp").addEventListener("click", openModal);
   $("btn-route").addEventListener("click", openRoute);
   $("btn-cal").addEventListener("click", downloadICS);
+  $("btn-music").addEventListener("click", toggleMusic);
   $("modal-x").addEventListener("click", closeModal);
   $("modal-close").addEventListener("click", closeModal);
   $("overlay").addEventListener("click", e=>{ if(e.target===$("overlay")) closeModal(); });
