@@ -333,6 +333,25 @@
   .music-btn.playing .icon-pause{display:block;}
   .music-btn .icon-pause{display:none;}
   .yt-player{position:fixed; width:0; height:0; overflow:hidden; opacity:0; pointer-events:none;}
+
+  /* music-synced background only (driven by --beat-* vars from JS) */
+  html.music-sync .bgphoto{
+    transform:scale(calc(1.06 + var(--beat-swell) * 0.014 + var(--beat-pulse) * 0.01));
+    filter:blur(5px) saturate(calc(1.05 + var(--beat-swell) * 0.08 + var(--beat-pulse) * 0.05))
+            brightness(calc(.96 + var(--beat-pulse) * 0.045));
+    transition:transform .14s ease-out, filter .14s ease-out;
+  }
+  html.music-sync .texture{
+    opacity:calc(1 - var(--beat-pulse) * 0.035);
+    transition:opacity .12s ease-out;
+  }
+  html.music-sync .vignette{
+    opacity:calc(1 - var(--beat-pulse) * 0.1);
+    transition:opacity .12s ease-out;
+  }
+  html.music-sync .petals i{
+    animation-duration:calc(var(--petal-dur) / (1 + var(--beat-pulse) * 0.28));
+  }
 </style>
 </head>
 <body>
@@ -431,7 +450,7 @@
 <script>
 const CONTACTS = [
   { name:"Haji Qasem Alizadeh", fa:"حاجی قاسم علیزاده", display:"0049 176 57986032",  raw:"004917657986032" },
-  { name:"Morteza Haschemi",     fa:"مرتضی هاشمی",       display:"0049 155773588952",  raw:"0049155773588952" },
+  { name:"Morteza Haschemi",     fa:"مرتضی هاشمی",       display:"0049 15773588952",  raw:"004915773588952" },
   { name:"Wahid Ahmadi",        fa:"وحید احمدی",         display:"0049 15563862430",   raw:"004915563862430" }
 ];
 
@@ -520,6 +539,7 @@ const I18N = {
 const ORDER = ["fa","en","de","nl","fr"];
 const YT_VIDEO_ID = "3gn_6HNGCtY";
 const YT_START_SEC = 2 * 60 + 37;
+const MUSIC_BPM = Number(new URLSearchParams(location.search).get("bpm")) || 88;
 const $ = id => document.getElementById(id);
 const faDigits = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 let current = "de", initial = true;
@@ -529,6 +549,8 @@ let musicPlaying = false;
 let musicInitStarted = false;
 let musicGestureBound = false;
 let loopWatchId = null;
+let musicSyncRaf = null;
+const musicSyncRoot = document.documentElement;
 
 function computeDays(){
   const target = new Date(2026,7,29);
@@ -670,6 +692,7 @@ function buildPetals(){
     p.style.height = size + "px";
     p.style.animationDuration = dur + "s";
     p.style.animationDelay = delay + "s";
+    p.style.setProperty("--petal-dur", dur + "s");
     p.style.opacity = "0";
     p.style.transform = "scale(" + sway + ")";
     box.appendChild(p);
@@ -725,6 +748,51 @@ function stopLoopWatch(){
   if(!loopWatchId) return;
   clearInterval(loopWatchId);
   loopWatchId = null;
+}
+
+function getMusicElapsed(){
+  if(!ytPlayer || !ytReady) return 0;
+  try{ return Math.max(0, ytPlayer.getCurrentTime() - YT_START_SEC); }catch(_e){ return 0; }
+}
+
+function applyBeatVars(elapsed){
+  const beat = elapsed * MUSIC_BPM / 60;
+  const phase = beat - Math.floor(beat);
+  const downbeat = Math.floor(beat) % 4 === 0 ? 1.35 : 1;
+  const pulse = Math.max(0, 1 - phase * 3.6) * downbeat;
+  const swell = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
+  musicSyncRoot.style.setProperty("--beat-phase", phase.toFixed(4));
+  musicSyncRoot.style.setProperty("--beat-pulse", Math.min(1, pulse).toFixed(4));
+  musicSyncRoot.style.setProperty("--beat-swell", swell.toFixed(4));
+}
+
+function tickMusicSync(){
+  if(!musicPlaying || !ytReady){
+    stopMusicSync();
+    return;
+  }
+  applyBeatVars(getMusicElapsed());
+  musicSyncRoot.classList.add("music-sync");
+  musicSyncRaf = requestAnimationFrame(tickMusicSync);
+}
+
+function startMusicSync(){
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if(musicSyncRaf) return;
+  applyBeatVars(getMusicElapsed());
+  musicSyncRoot.classList.add("music-sync");
+  musicSyncRaf = requestAnimationFrame(tickMusicSync);
+}
+
+function stopMusicSync(){
+  if(musicSyncRaf){
+    cancelAnimationFrame(musicSyncRaf);
+    musicSyncRaf = null;
+  }
+  musicSyncRoot.classList.remove("music-sync");
+  musicSyncRoot.style.removeProperty("--beat-phase");
+  musicSyncRoot.style.removeProperty("--beat-pulse");
+  musicSyncRoot.style.removeProperty("--beat-swell");
 }
 
 function tryPlayMusic(fromStart){
@@ -816,8 +884,13 @@ function initYouTubePlayer(){
           e.target.playVideo();
         }
         musicPlaying = e.data === YT.PlayerState.PLAYING;
-        if(musicPlaying) startLoopWatch();
-        else stopLoopWatch();
+        if(musicPlaying){
+          startLoopWatch();
+          startMusicSync();
+        }else{
+          stopLoopWatch();
+          stopMusicSync();
+        }
         updateMusicBtn();
       },
       onError: ()=> bindMusicGestureFallback()
@@ -837,6 +910,7 @@ function toggleMusic(){
     if(musicPlaying){
       ytPlayer.pauseVideo();
       stopLoopWatch();
+      stopMusicSync();
     }else{
       tryPlayMusic(false);
     }
