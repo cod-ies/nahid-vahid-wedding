@@ -129,8 +129,11 @@
   .star span{position:absolute; inset:0; border:1.4px solid #b08d57;}
   .star span:last-child{transform:rotate(45deg);}
 
+  .heart{display:inline-block; color:#b08d57;}
+  .heart svg{display:block; width:18px; height:16px;}
+
   .star-top{display:flex; justify-content:center; margin-bottom:18px; transform:translateZ(38px); animation:rise .8s cubic-bezier(.2,.7,.2,1) .25s both;}
-  .star-top .star{width:16px; height:16px; animation:glow 4s ease-in-out infinite;}
+  .star-top .heart{animation:glow 4s ease-in-out infinite;}
 
   .bismillah{font-family:'Amiri', serif; direction:rtl; text-align:center; font-size:clamp(13px,3.7vw,15px); color:#9c7d49; letter-spacing:.3px; margin-bottom:22px; animation:rise .8s cubic-bezier(.2,.7,.2,1) .35s both;}
 
@@ -188,9 +191,6 @@
   .details .val.host{font-size:clamp(16.5px,4.6vw,19px);}
   .details .sub{font-size:clamp(14px,3.9vw,16px); font-style:italic; color:#6e7d76; margin-top:2px;}
 
-  .rsvp-note{text-align:center; font-size:clamp(14.5px,4vw,16.5px); font-style:italic; color:#4a5a53; line-height:1.55; padding:0 4px;}
-  .deadline{text-align:center; font-size:clamp(11.5px,3.2vw,13px); letter-spacing:1.5px; text-transform:uppercase; color:#b08d57; margin-top:12px;}
-
   .actions{display:flex; flex-direction:column; gap:11px; margin-top:26px; transform:translateZ(18px); animation:rise .9s cubic-bezier(.2,.7,.2,1) 1.3s both;}
   .btn{appearance:none; cursor:pointer; font-family:'Cormorant Garamond', serif; text-transform:uppercase; border-radius:2px; transition:background .25s, border-color .25s; line-height:1;}
   .btn-primary{border:none; background:#243531; color:#f3ead5; font-size:clamp(14.5px,3.8vw,17px); letter-spacing:1.6px; min-height:clamp(48px,12vw,54px); height:auto; padding:11px 14px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.25;}
@@ -207,9 +207,9 @@
   /* Farsi UI mode */
   .inner.fa .eyebrow, .inner.fa .connector .word, .inner.fa .wedding-line,
   .inner.fa .countdown .lbl, .inner.fa .details .label, .inner.fa .details .val,
-  .inner.fa .details .sub, .inner.fa .rsvp-note, .inner.fa .deadline,
+  .inner.fa .details .sub,
   .inner.fa .btn{font-family:'Vazirmatn', sans-serif;}
-  .inner.fa .eyebrow, .inner.fa .deadline, .inner.fa .details .label,
+  .inner.fa .eyebrow, .inner.fa .details .label,
   .inner.fa .countdown .lbl, .inner.fa .connector .word{letter-spacing:.4px;}
   .inner.fa .btn{letter-spacing:.6px; text-transform:none;}
 
@@ -308,7 +308,7 @@
 
   @media (prefers-reduced-motion:reduce){
     .card,.inner,.star-top,.bismillah,.eyebrow,.connector,.names,.farsi-names,
-    .wedding-line,.photo,.countdown,.details,.actions,.star-top .star,.star-bottom .star,
+    .wedding-line,.photo,.countdown,.details,.actions,.star-top .heart,.star-bottom .star,
     .modal,.overlay,.names .nm,.petals i{animation:none !important; opacity:1 !important; transform:none !important;}
     .names{transform:translateZ(28px) !important;}
     .names .nm{background-position:0 0 !important;}
@@ -371,7 +371,7 @@
         <span class="corner bl" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M2 2 V40 M2 2 H40" stroke="currentColor" stroke-width="2"/><path d="M2 14 C24 14 14 2 36 2" stroke="currentColor" stroke-width="1.4"/><path d="M10 10 C30 18 18 30 26 26" stroke="currentColor" stroke-width="1.2"/><circle cx="2" cy="2" r="2.4" fill="currentColor"/></svg></span>
         <span class="corner br" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M2 2 V40 M2 2 H40" stroke="currentColor" stroke-width="2"/><path d="M2 14 C24 14 14 2 36 2" stroke="currentColor" stroke-width="1.4"/><path d="M10 10 C30 18 18 30 26 26" stroke="currentColor" stroke-width="1.2"/><circle cx="2" cy="2" r="2.4" fill="currentColor"/></svg></span>
 
-        <div class="star-top"><span class="star"><span></span><span></span></span></div>
+        <div class="star-top"><span class="heart" aria-hidden="true"><svg viewBox="0 0 24 22" fill="none"><path d="M12 20.5s-7.5-5.5-7.5-10.5a4.5 4.5 0 0 1 9 0 4.5 4.5 0 0 1 9 0c0 5-7.5 10.5-7.5 10.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span></div>
 
         <div class="bismillah">به نام خداوند جان و خرد</div>
 
@@ -408,9 +408,6 @@
         </div>
 
         <div class="divider"><span class="line"></span><span class="star"><span></span><span></span></span><span class="line r"></span></div>
-
-        <div class="rsvp-note" data-i18n="rsvpNote"></div>
-        <div class="deadline" data-i18n="deadline"></div>
 
         <div class="actions">
           <button class="btn btn-primary" id="btn-rsvp" data-i18n="bZusagen"></button>
@@ -462,8 +459,6 @@ const I18N = {
     lDate:"تاریخ", vDate:"شنبه ۲۹.۰۸.۲۰۲۶",
     lTime:"ساعت", vTime:"۱۷:۰۰",
     lVenue:"محل برگزاری", lHosts:"دعوت‌کنندگان", vHosts:"خانواده علیزاده و خانواده هاشمی",
-    rsvpNote:"جهت هر چه بهتر برگزار شدن محفل، از تمام مهمانان گرامی خواهشمندیم که تصمیم خود را به اطلاع برگزارکنندگان برسانند.",
-    deadline:"لطفاً تا ۰۷.۰۸ پاسخ دهید",
     bZusagen:"اعلام حضور یا عدم حضور", bRoute:"مسیریابی", bCal:"افزودن به تقویم",
     bMusicPlay:"پخش موسیقی", bMusicPause:"توقف موسیقی",
     pTitle:"اعلام حضور یا عدم حضور",
@@ -478,8 +473,6 @@ const I18N = {
     lDate:"Date", vDate:"Saturday, 29 August 2026",
     lTime:"Time", vTime:"17:00",
     lVenue:"Venue", lHosts:"Hosts", vHosts:"The Alizadeh & Haschemi families",
-    rsvpNote:"To help us make the celebration as wonderful as possible, we kindly ask all our dear guests to share their decision with the hosts.",
-    deadline:"Please reply by 7 August",
     bZusagen:"Accept or Decline", bRoute:"Directions", bCal:"Add to calendar",
     bMusicPlay:"Play music", bMusicPause:"Pause music",
     pTitle:"Reply to the hosts",
@@ -494,8 +487,6 @@ const I18N = {
     lDate:"Datum", vDate:"Samstag, 29. August 2026",
     lTime:"Beginn", vTime:"17:00 Uhr",
     lVenue:"Ort", lHosts:"Gastgeber", vHosts:"Die Familien Alizadeh & Haschemi",
-    rsvpNote:"Damit die Feier so schön wie möglich wird, bitten wir alle lieben Gäste, den Gastgebern ihre Entscheidung mitzuteilen.",
-    deadline:"Bitte um Rückmeldung bis 7. August",
     bZusagen:"Zusagen oder Absagen", bRoute:"Route", bCal:"Zum Kalender",
     bMusicPlay:"Musik abspielen", bMusicPause:"Musik pausieren",
     pTitle:"Zu- oder Absage",
@@ -510,8 +501,6 @@ const I18N = {
     lDate:"Datum", vDate:"Zaterdag, 29 augustus 2026",
     lTime:"Aanvang", vTime:"17:00 uur",
     lVenue:"Locatie", lHosts:"Gastheren", vHosts:"De families Alizadeh & Haschemi",
-    rsvpNote:"Om het feest zo mooi mogelijk te maken, vragen wij alle lieve gasten vriendelijk hun beslissing aan de gastheren door te geven.",
-    deadline:"Graag bevestigen vóór 7 augustus",
     bZusagen:"Aanmelden of afmelden", bRoute:"Route", bCal:"Naar agenda",
     bMusicPlay:"Muziek afspelen", bMusicPause:"Muziek pauzeren",
     pTitle:"Aan- of afmelden",
@@ -526,8 +515,6 @@ const I18N = {
     lDate:"Date", vDate:"Samedi 29 août 2026",
     lTime:"Début", vTime:"17 h 00",
     lVenue:"Lieu", lHosts:"Hôtes", vHosts:"Les familles Alizadeh & Haschemi",
-    rsvpNote:"Afin que la fête soit la plus belle possible, nous prions tous nos chers invités de communiquer leur décision aux hôtes.",
-    deadline:"Merci de répondre avant le 7 août",
     bZusagen:"Accepter ou refuser", bRoute:"Itinéraire", bCal:"Au calendrier",
     bMusicPlay:"Lire la musique", bMusicPause:"Mettre en pause",
     pTitle:"Répondre aux hôtes",
